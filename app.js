@@ -197,19 +197,73 @@
   })();
 
   /* ---------- hero avatar parallax + scan ---------- */
-  (function avatarFx(){
-    var frame = $("#avatarFrame");
-    if(!frame) return;
-    if(!reduceMotion && window.matchMedia("(pointer:fine)").matches){
-      var hero = $(".hero");
-      hero.addEventListener("mousemove", function(e){
-        var r = hero.getBoundingClientRect();
-        var px = (e.clientX - r.left)/r.width - .5;
-        var py = (e.clientY - r.top)/r.height - .5;
-        frame.style.transform = "rotateY("+(px*9).toFixed(2)+"deg) rotateX("+(-py*9).toFixed(2)+"deg)";
-      });
-      hero.addEventListener("mouseleave", function(){ frame.style.transform = ""; });
+  /* ---------- hero terminal typing ---------- */
+  (function heroTerminal(){
+    var box = $("#termBody");
+    if(!box) return;
+    var SCRIPT = [
+      { t:"cmd", s:"whoami" },
+      { t:"out", s:"Abdul Azeem — AI / Machine Learning Engineer", c:"va" },
+      { t:"cmd", s:"cat location.txt" },
+      { t:"out", s:"📍 Lahore, Pakistan · open to work worldwide" },
+      { t:"cmd", s:"cat about.md" },
+      { t:"out", s:"I take AI from a notebook idea to something live —" },
+      { t:"out", s:"on a cloud server or a tiny Raspberry Pi on the floor." },
+      { t:"cmd", s:"ls ~/skills" },
+      { t:"out", s:"ml  computer-vision  genai  rag  agents  cloud  edge" },
+      { t:"cmd", s:"cat values.txt" },
+      { t:"ok",  s:"✓ I build things that actually ship —" },
+      { t:"ok",  s:"✓ and keep working under real load." },
+      { t:"cmd", s:"./say-hello.sh" },
+      { t:"ok",  s:"✓ available for work — let's build something" }
+    ];
+    var PROMPT = '<span class="pr">abdul@azeem</span><span class="cm">:~$</span> ';
+    if(reduceMotion){
+      box.innerHTML = SCRIPT.map(function(l){
+        if(l.t==="cmd") return '<div class="ln">'+PROMPT+l.s+'</div>';
+        return '<div class="ln '+(l.t==="ok"?"ok":(l.c||"out"))+'">'+l.s+'</div>';
+      }).join("");
+      return;
     }
+    var li = 0, ci = 0, lineEl = null;
+    var cursor = '<span class="term-cursor"></span>';
+    function step(){
+      if(li >= SCRIPT.length){
+        // loop: pause then restart
+        setTimeout(function(){ box.innerHTML=""; li=0; ci=0; lineEl=null; step(); }, 4200);
+        return;
+      }
+      var item = SCRIPT[li];
+      if(item.t === "cmd"){
+        if(!lineEl){ lineEl = document.createElement("div"); lineEl.className="ln"; box.appendChild(lineEl); }
+        if(ci <= item.s.length){
+          lineEl.innerHTML = PROMPT + item.s.slice(0, ci) + cursor;
+          ci++;
+          setTimeout(step, 34 + Math.random()*42);
+        } else {
+          lineEl.innerHTML = PROMPT + item.s;
+          lineEl = null; ci = 0; li++;
+          setTimeout(step, 360);
+        }
+      } else {
+        var out = document.createElement("div");
+        out.className = "ln " + (item.t==="ok" ? "ok" : (item.c||"out"));
+        out.textContent = item.s;
+        box.appendChild(out);
+        li++; ci=0;
+        setTimeout(step, 520);
+      }
+      box.scrollTop = box.scrollHeight;
+    }
+    // start when hero in view (with a safety fallback so it never stays blank)
+    var started = false;
+    function begin(){ if(!started){ started = true; step(); } }
+    if("IntersectionObserver" in window){
+      new IntersectionObserver(function(ents){
+        ents.forEach(function(en){ if(en.isIntersecting) begin(); });
+      }, { threshold:.2 }).observe(box);
+      setTimeout(begin, 1200); // fallback if IO never fires (offscreen/non-painted)
+    } else { begin(); }
   })();
 
 
